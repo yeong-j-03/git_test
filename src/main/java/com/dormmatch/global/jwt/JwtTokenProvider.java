@@ -29,11 +29,11 @@ public class JwtTokenProvider {
         );
     }
     //user id랑 role을 넣어서 access토큰 생성
-    public String createAccessToken(Long userId, String role) {
+    public String createAccessToken(String userId, String role) {
         return createToken(userId, role, jwtProperties.getAccessTokenExpiration());
     }
     //refresh토큰 생성
-    public String createRefreshToken(Long userId, String role) {
+    public String createRefreshToken(String userId, String role) {
         return createToken(userId, role, jwtProperties.getRefreshTokenExpiration());
     }
     //토큰 검증
@@ -63,13 +63,13 @@ public class JwtTokenProvider {
         return jwtProperties.getRefreshTokenExpiration();
     }
     //실제 토큰 만들어줌
-    private String createToken(Long userId, String role, Long expirationMillis) {
+    private String createToken(String userId, String role, Long expirationMillis) {
         Date now = new Date();
         Date expiresAt = new Date(now.getTime() + expirationMillis);
 
         // subject에는 로컬 사용자 ID를 저장하고, role은 권한 확인용 claim으로 저장한다.
         return Jwts.builder()
-                .subject(String.valueOf(userId))
+                .subject(userId)
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiresAt)

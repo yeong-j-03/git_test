@@ -40,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 2. 토큰이 존재하고, 위변조 및 만료 검증을 통과했다면 인증 처리를 진행합니다.
         if (token != null && jwtTokenProvider.validateToken(token)) {
             Claims claims = jwtTokenProvider.parseClaims(token);
-            Long userId = Long.valueOf(claims.getSubject()); // 토큰 생성 시 넣었던 유저 ID 추출
+            String userId = claims.getSubject(); // 토큰 생성 시 넣었던 유저 ID 추출
             String role = claims.get("role", String.class); // 토큰 생성 시 넣었던 권한 추출
 
             // 3. Spring Security의 권한 체계에 맞게 "ROLE_USER"나 "ROLE_ADMIN" 형태로 권한 객체를 생성합니다.
