@@ -1,29 +1,68 @@
 package com.dormmatch.global.exception;
 
-
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import com.dormmatch.global.response.GlobalApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.List;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionController {
 
-    @ApiResponses(
-            value = @ApiResponse(
-                responseCode = "500", description = "INTERNAL_SERVER_ERROR"
-            )
-    )
+    // Handler 처리되지 않은 다른 모든 예외들이 발생시키는 예외 처리용
+    // 500 Internal Server Error
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<?>> handleException(Exception e){
+    public ResponseEntity<GlobalApiResponse<?>> handleException(Exception e) {
+        log.warn("Internal Server Error: {}", e.getMessage());
+
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        return new ResponseEntity<>(com.dormmatch.global.response.ApiResponse.error(status, "서버 내부 오류가 발생하였습니다."))
+
+        return ResponseEntity
+                .status(status)
+                .body(GlobalApiResponse.error(status, "서버 내부 오류입니다.", null));
     }
 
+    // Jakarta Validation(@NonNull, @NotEmpty, @NotBlank 등)
+    // 컨트롤러가 JSON을 DTO 객체에 매핑할 때 값이 null이면 MethodArgumentNotValidException 발생
+    // 그에 해당하는 Handler로 어떤 부분이 null인지도 확인
+    // 400 Bad Request
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<GlobalApiResponse<?>> handleValidationException(MethodArgumentNotValidException e) {
+        log.warn("Validation failed: {}", e.getMessage());
+
+        List<GlobalApiResponse.ErrorResponse> errors = e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(fe -> new GlobalApiResponse.ErrorResponse(
+                        fe.getField(),
+                        fe.getDefaultMessage()
+                ))
+                .toList();
+
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        return ResponseEntity
+                .status(status)
+                .body(GlobalApiResponse.error(status, "필수 항목 누락 / 값 범위 초과", errors));
+    }
+
+    // Business 영역에서 발생하는 예외 Handler 처리
+    // ErrorCode에 정의된 Code들로 BusinessException을 발생시키면 동작
+    // 정의된 각 Http Status 대로 처리
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<GlobalApiResponse<?>> handleBusinessException(BusinessException e) {
+        log.warn("BusinessException: {}", e.getMessage());
+
+        ErrorCode errorCode = e.getErrorCode();
+        HttpStatus httpStatus = errorCode.getHttpStatus();
+
+        return ResponseEntity
+                .status(httpStatus)
+                .body(GlobalApiResponse.error(httpStatus, errorCode.getMessage(), null));
+    }
 }

@@ -1,39 +1,44 @@
 package com.dormmatch.global.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.nimbusds.oauth2.sdk.ErrorResponse;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
-import software.amazon.awssdk.http.HttpStatusCode;
 
 @Getter
-@Builder
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
+
+    private final int status;
+    private final String message;
     private final T data;
-    private final ErrorResponse error;
 
-    public static <T> ApiResponse<T> success(T data){
-        return ApiResponse.<T>builder()
-                .data(data)
-                .build();
+    private ApiResponse(HttpStatus status, String message, T data) {
+        this.status = status.value();
+        this.message = message;
+        this.data = data;
     }
 
-    public static ApiResponse<?> error(HttpStatus status, String message){
-        return ApiResponse.builder()
-                .error(new ErrorResponse(status.value(), status.name(), message))
-                .build();
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(HttpStatus.OK, "OK", data);
     }
 
-    @Getter
-    @AllArgsConstructor
-    public static class ErrorResponse{
-        private final int code;
-        private final String error;
-        private final String message;
+    public static <T> ApiResponse<T> success() {
+        return new ApiResponse<>(HttpStatus.OK, "OK", null);
+    }
+
+    public static <T> ApiResponse<T> successMessage(String message) {
+        return new ApiResponse<>(HttpStatus.OK, message, null);
+    }
+
+    public static <T> ApiResponse<T> successMessage(String message, T data) {
+        return new ApiResponse<>(HttpStatus.OK, message, data);
+    }
+
+    public static <T> ApiResponse<T> success(HttpStatus status, String message, T data) {
+        return new ApiResponse<>(status, message, data);
+    }
+
+    public static <T> ApiResponse<T> error(HttpStatus status, String message) {
+        return new ApiResponse<>(status, message, null);
     }
 }
